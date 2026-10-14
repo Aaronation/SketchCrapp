@@ -1,14 +1,14 @@
-import type { NamedWow } from '../lib/aggregates'
+import type { NamedDelta } from '../lib/aggregates'
 import { formatMoney, formatPct } from '../lib/aggregates'
 
-type Props = { rows: NamedWow[] }
+type Props = { rows: NamedDelta[] }
 
 export function RepBoard({ rows }: Props) {
   return (
-    <section className="rep-board" aria-label="Rep week-over-week">
+    <section className="rep-board" aria-label="Rep month-over-month">
       <header>
         <h2>Rep board</h2>
-        <p>This week vs last week — talking points for 1:1s</p>
+        <p>This week vs same calendar dates last month — talking points for 1:1s</p>
       </header>
       <ul>
         {rows.map((r) => {
@@ -31,9 +31,9 @@ export function RepBoard({ rows }: Props) {
               <div className="rep-board__nums">
                 <span>{formatMoney(r.revenue)}</span>
                 <span className={cls}>
-                  {r.deltaPct == null ? 'new' : formatPct(r.deltaPct)}
+                  {r.deltaPct == null ? 'new' : formatPct(r.deltaPct)} MoM
                 </span>
-                <span className="muted">was {formatMoney(r.prevRevenue)}</span>
+                <span className="muted">prior period {formatMoney(r.prevRevenue)}</span>
               </div>
             </li>
           )

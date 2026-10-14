@@ -2,7 +2,7 @@ import { formatMoney, formatPct } from '../lib/aggregates'
 
 type Props = {
   weekLabel: string
-  prevWeekLabel: string | null
+  priorPeriodLabel: string | null
   revenue: number
   prevRevenue: number
   delta: number | null
@@ -23,7 +23,7 @@ function Delta({ value }: { value: number | null }) {
 
 export function KpiRow({
   weekLabel,
-  prevWeekLabel,
+  priorPeriodLabel,
   revenue,
   prevRevenue,
   delta,
@@ -45,11 +45,12 @@ export function KpiRow({
         <p className="kpis__label">This week (HKD) · {weekLabel}</p>
         <p className="kpis__value">{formatMoney(revenue)}</p>
         <p className="kpis__hint">
-          vs {prevWeekLabel ?? 'prior'} {formatMoney(prevRevenue)} <Delta value={delta} />
+          vs same period last month ({priorPeriodLabel ?? '—'}) {formatMoney(prevRevenue)}{' '}
+          <Delta value={delta} />
         </p>
       </div>
       <div>
-        <p className="kpis__label">Week-over-week</p>
+        <p className="kpis__label">Month-over-month</p>
         <p className="kpis__value">
           <Delta value={delta} />
         </p>
@@ -61,7 +62,8 @@ export function KpiRow({
         <p className="kpis__label">Unique customers</p>
         <p className="kpis__value">{customers.toLocaleString()}</p>
         <p className="kpis__hint">
-          prior week {prevCustomers.toLocaleString()} <Delta value={custDelta} />
+          same period last month {prevCustomers.toLocaleString()}{' '}
+          <Delta value={custDelta} />
         </p>
       </div>
       <div>

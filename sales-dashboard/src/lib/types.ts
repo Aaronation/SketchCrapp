@@ -39,7 +39,7 @@ export type SalesPayload = {
   lineItems: LineItem[]
 }
 
-/** Week-first filters for manager weekly review. */
+/** Week-first filters for manager weekly review (deltas are MoM same-period). */
 export type Filters = {
   weekKey: string // e.g. 2026-W41 or "all"
   salesperson: string

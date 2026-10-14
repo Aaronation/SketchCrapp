@@ -10,23 +10,23 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import type { NamedWow } from '../lib/aggregates'
+import type { NamedDelta } from '../lib/aggregates'
 import { formatMoney, formatPct, shortName } from '../lib/aggregates'
 
 type Daily = { date: string; revenue: number; quantity: number }
 
 type Props = {
-  bySalesperson: NamedWow[]
-  byCustomer: NamedWow[]
-  bySku: NamedWow[]
+  bySalesperson: NamedDelta[]
+  byCustomer: NamedDelta[]
+  bySku: NamedDelta[]
   daily: Daily[]
 }
 
 export function Charts({ bySalesperson, byCustomer, bySku, daily }: Props) {
   const repData = bySalesperson.map((s) => ({
     name: shortName(s.name),
-    thisWeek: Math.round(s.revenue),
-    lastWeek: Math.round(s.prevRevenue),
+    thisPeriod: Math.round(s.revenue),
+    priorPeriod: Math.round(s.prevRevenue),
   }))
 
   const topCust = byCustomer.slice(0, 8).map((c) => ({
@@ -49,7 +49,7 @@ export function Charts({ bySalesperson, byCustomer, bySku, daily }: Props) {
   return (
     <section className="charts">
       <figure className="chart-panel chart-panel--wide">
-        <figcaption>Reps · this week vs last week</figcaption>
+        <figcaption>Reps · this week vs same period last month</figcaption>
         <ResponsiveContainer width="100%" height={260}>
           <BarChart data={repData}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(20,40,30,0.08)" />
@@ -57,8 +57,13 @@ export function Charts({ bySalesperson, byCustomer, bySku, daily }: Props) {
             <YAxis tickFormatter={(v) => `${Math.round(Number(v) / 1000)}k`} width={48} />
             <Tooltip formatter={(v) => formatMoney(Number(v))} />
             <Legend />
-            <Bar dataKey="lastWeek" name="Last week" fill="#8FA99A" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="thisWeek" name="This week" fill="#0B6E4F" radius={[4, 4, 0, 0]} />
+            <Bar
+              dataKey="priorPeriod"
+              name="Same period last month"
+              fill="#8FA99A"
+              radius={[4, 4, 0, 0]}
+            />
+            <Bar dataKey="thisPeriod" name="This week" fill="#0B6E4F" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </figure>
@@ -91,7 +96,7 @@ export function Charts({ bySalesperson, byCustomer, bySku, daily }: Props) {
                 const d = payload?.[0]?.payload
                 if (!d) return ''
                 const delta =
-                  d.delta == null ? 'new vs prior' : `WoW ${formatPct(d.delta as number)}`
+                  d.delta == null ? 'new vs prior month' : `MoM ${formatPct(d.delta as number)}`
                 return `${d.name} · ${delta}`
               }}
             />

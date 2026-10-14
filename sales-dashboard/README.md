@@ -1,6 +1,6 @@
 # Team Aaron — Weekly manager review
 
-Web app for **sales managers** to review Team Aaron (Galaxy/KA) performance on a **weekly** cadence: pick a week, see week-over-week deltas, scan reps / customers / SKUs, then open line detail. All money amounts are **HKD**.
+Web app for **sales managers** to review Team Aaron (Galaxy/KA) performance on a **weekly** cadence: pick a review week, compare it to the **same calendar dates last month** (MoM), scan reps / customers / SKUs, then open line detail. All money amounts are **HKD**.
 
 Seed data is parsed from the Team Aaron Excel reference workbooks (Oct + Aug enhanced).
 

@@ -5,13 +5,17 @@ import { KpiRow } from './components/KpiRow'
 import { LineTable } from './components/LineTable'
 import { RepBoard } from './components/RepBoard'
 import {
+  dailyTrend,
+  filterByDateRange,
   filterItems,
   filterMtdThroughWeek,
-  groupByWithWow,
+  formatRangeLabel,
+  groupByWithPrior,
   isoWeekKey,
   listWeekKeys,
   monthKeyFromDate,
-  prevWeekKey,
+  pctDelta,
+  samePeriodLastMonth,
   sumQty,
   sumRevenue,
   teamTargetForMonth,
@@ -19,8 +23,6 @@ import {
   uniqueSorted,
   weekDateRange,
   weekLabel,
-  wowDelta,
-  dailyTrend,
 } from './lib/aggregates'
 import type { Filters, SalesPayload } from './lib/types'
 import './App.css'
@@ -70,17 +72,24 @@ export default function App() {
     [payload],
   )
 
-  const prevKey = filters && filters.weekKey !== 'all' ? prevWeekKey(filters.weekKey) : null
+  const selectedRange =
+    filters && filters.weekKey !== 'all' ? weekDateRange(filters.weekKey) : null
+  const priorRange = selectedRange ? samePeriodLastMonth(selectedRange) : null
 
   const thisWeek = useMemo(() => {
     if (!payload || !filters) return []
     return filterItems(payload.lineItems, filters)
   }, [payload, filters])
 
-  const lastWeek = useMemo(() => {
-    if (!payload || !filters || !prevKey) return []
-    return filterItems(payload.lineItems, filters, prevKey)
-  }, [payload, filters, prevKey])
+  const priorPeriod = useMemo(() => {
+    if (!payload || !filters || !priorRange) return []
+    return filterByDateRange(
+      payload.lineItems,
+      filters,
+      priorRange.start,
+      priorRange.end,
+    )
+  }, [payload, filters, priorRange])
 
   const mtd = useMemo(() => {
     if (!payload || !filters || filters.weekKey === 'all') return []
@@ -88,16 +97,16 @@ export default function App() {
   }, [payload, filters])
 
   const bySp = useMemo(
-    () => groupByWithWow(thisWeek, lastWeek, (r) => r.salesperson),
-    [thisWeek, lastWeek],
+    () => groupByWithPrior(thisWeek, priorPeriod, (r) => r.salesperson),
+    [thisWeek, priorPeriod],
   )
   const byCust = useMemo(
-    () => groupByWithWow(thisWeek, lastWeek, (r) => r.customer),
-    [thisWeek, lastWeek],
+    () => groupByWithPrior(thisWeek, priorPeriod, (r) => r.customer),
+    [thisWeek, priorPeriod],
   )
   const bySku = useMemo(
-    () => groupByWithWow(thisWeek, lastWeek, (r) => r.productModel || r.sku),
-    [thisWeek, lastWeek],
+    () => groupByWithPrior(thisWeek, priorPeriod, (r) => r.productModel || r.sku),
+    [thisWeek, priorPeriod],
   )
   const daily = useMemo(() => dailyTrend(thisWeek), [thisWeek])
 
@@ -118,9 +127,9 @@ export default function App() {
   }
 
   const revenue = sumRevenue(thisWeek)
-  const prevRevenue = sumRevenue(lastWeek)
-  const delta = wowDelta(revenue, prevRevenue)
-  const range = weekDateRange(filters.weekKey)
+  const prevRevenue = sumRevenue(priorPeriod)
+  const delta = pctDelta(revenue, prevRevenue)
+  const range = selectedRange
   const monthKey = range ? monthKeyFromDate(range.end) : '2026-10'
   const monthTarget = teamTargetForMonth(monthKey, payload.meta.targets)
   const mtdRevenue = sumRevenue(mtd)
@@ -130,6 +139,7 @@ export default function App() {
     .sort()
   const dataFrom = dateExtent[0]
   const dataTo = dateExtent[dateExtent.length - 1]
+  const priorLabel = priorRange ? formatRangeLabel(priorRange) : null
 
   return (
     <div className="shell">
@@ -138,15 +148,16 @@ export default function App() {
           <p className="hero__eyebrow">Team Aaron · Galaxy / KA</p>
           <h1>Weekly manager review</h1>
           <p className="hero__lede">
-            Week-over-week performance for the sales meeting — pick a week, scan
-            reps and movers, then open line detail. Seeded from the Team Aaron
-            Excel examples ({dataFrom} → {dataTo}).
+            Pick a review week, then compare it to the{' '}
+            <strong>same calendar dates last month</strong> (MoM). Scan reps and
+            movers, then open line detail. Seeded from the Team Aaron Excel
+            examples ({dataFrom} → {dataTo}). Currency: HKD.
           </p>
         </div>
         <div className="hero__aside">
           <p className="hero__week">{weekLabel(filters.weekKey)}</p>
           <p className="hero__aside-meta">
-            Comparing to {prevKey ? weekLabel(prevKey) : '—'}
+            MoM vs {priorLabel ? `prior month ${priorLabel}` : '—'}
           </p>
         </div>
       </header>
@@ -162,12 +173,12 @@ export default function App() {
 
       <KpiRow
         weekLabel={filters.weekKey}
-        prevWeekLabel={prevKey}
+        priorPeriodLabel={priorLabel}
         revenue={revenue}
         prevRevenue={prevRevenue}
         delta={delta}
         customers={uniqueCustomers(thisWeek)}
-        prevCustomers={uniqueCustomers(lastWeek)}
+        prevCustomers={uniqueCustomers(priorPeriod)}
         quantity={sumQty(thisWeek)}
         lines={thisWeek.length}
         mtdRevenue={mtdRevenue}
@@ -185,6 +196,9 @@ export default function App() {
         <p>
           Phase 1 web app · {payload.meta.mergedRows.toLocaleString()} line items ·
           ISO week {filters.weekKey}
+          {priorRange
+            ? ` · MoM baseline ${priorRange.start} → ${priorRange.end}`
+            : ''}
           {thisWeek[0]?.date
             ? ` · sample day ${isoWeekKey(thisWeek[0].date!)}`
             : ''}

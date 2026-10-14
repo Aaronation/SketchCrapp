@@ -30,20 +30,6 @@ export function parseWeekKey(weekKey: string): { year: number; week: number } | 
   return { year: Number(m[1]), week: Number(m[2]) }
 }
 
-/** Previous ISO week key. */
-export function prevWeekKey(weekKey: string): string | null {
-  const p = parseWeekKey(weekKey)
-  if (!p) return null
-  // Thursday of that ISO week
-  const jan4 = new Date(Date.UTC(p.year, 0, 4))
-  const day = jan4.getUTCDay() || 7
-  const week1Mon = new Date(jan4)
-  week1Mon.setUTCDate(jan4.getUTCDate() - day + 1)
-  const target = new Date(week1Mon)
-  target.setUTCDate(week1Mon.getUTCDate() + (p.week - 1) * 7 - 7)
-  return isoWeekKey(target.toISOString().slice(0, 10))
-}
-
 export function weekDateRange(weekKey: string): { start: string; end: string } | null {
   const p = parseWeekKey(weekKey)
   if (!p) return null
@@ -61,6 +47,35 @@ export function weekDateRange(weekKey: string): { start: string; end: string } |
   }
 }
 
+/** Shift a calendar date by N months, clamping day (e.g. Mar 31 → Feb 28). */
+export function addMonthsClamped(isoDate: string, deltaMonths: number): string {
+  const d = new Date(isoDate + 'T12:00:00Z')
+  const day = d.getUTCDate()
+  d.setUTCDate(1)
+  d.setUTCMonth(d.getUTCMonth() + deltaMonths)
+  const maxDay = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate()
+  d.setUTCDate(Math.min(day, maxDay))
+  return d.toISOString().slice(0, 10)
+}
+
+/**
+ * MoM “same period”: selected range shifted back one calendar month.
+ * e.g. 2026-10-05→10-11 → 2026-09-05→09-11 (not the previous ISO week).
+ */
+export function samePeriodLastMonth(range: {
+  start: string
+  end: string
+}): { start: string; end: string } {
+  return {
+    start: addMonthsClamped(range.start, -1),
+    end: addMonthsClamped(range.end, -1),
+  }
+}
+
+export function formatRangeLabel(range: { start: string; end: string }): string {
+  return `${range.start.slice(5)} → ${range.end.slice(5)}`
+}
+
 export function monthKeyFromDate(iso: string): string {
   return iso.slice(0, 7)
 }
@@ -73,28 +88,45 @@ export function listWeekKeys(items: LineItem[]): string[] {
   return [...set].sort()
 }
 
-export function filterItems(items: LineItem[], f: Filters, weekOverride?: string): LineItem[] {
-  const week = weekOverride ?? f.weekKey
+function matchesDimFilters(row: LineItem, f: Filters): boolean {
+  if (f.salesperson !== 'all' && row.salesperson !== f.salesperson) return false
+  if (f.department !== 'all' && row.department !== f.department) return false
   const q = f.query.trim().toLowerCase()
+  if (!q) return true
+  const hay = [
+    row.invoice,
+    row.customer,
+    row.tradingPartner,
+    row.sku,
+    row.productModel,
+    row.productName,
+    row.salesperson,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+  return hay.includes(q)
+}
+
+export function filterItems(items: LineItem[], f: Filters): LineItem[] {
   return items.filter((row) => {
     if (!row.date) return false
-    if (week !== 'all' && isoWeekKey(row.date) !== week) return false
-    if (f.salesperson !== 'all' && row.salesperson !== f.salesperson) return false
-    if (f.department !== 'all' && row.department !== f.department) return false
-    if (!q) return true
-    const hay = [
-      row.invoice,
-      row.customer,
-      row.tradingPartner,
-      row.sku,
-      row.productModel,
-      row.productName,
-      row.salesperson,
-    ]
-      .filter(Boolean)
-      .join(' ')
-      .toLowerCase()
-    return hay.includes(q)
+    if (f.weekKey !== 'all' && isoWeekKey(row.date) !== f.weekKey) return false
+    return matchesDimFilters(row, f)
+  })
+}
+
+/** Inclusive calendar date range (used for MoM same-period baseline). */
+export function filterByDateRange(
+  items: LineItem[],
+  f: Filters,
+  start: string,
+  end: string,
+): LineItem[] {
+  return items.filter((row) => {
+    if (!row.date) return false
+    if (row.date < start || row.date > end) return false
+    return matchesDimFilters(row, f)
   })
 }
 
@@ -156,16 +188,16 @@ export function groupBy(
   return [...map.values()].sort((a, b) => b.revenue - a.revenue)
 }
 
-export type NamedWow = NamedTotal & {
+export type NamedDelta = NamedTotal & {
   prevRevenue: number
   deltaPct: number | null
 }
 
-export function groupByWithWow(
+export function groupByWithPrior(
   current: LineItem[],
   previous: LineItem[],
   keyFn: (r: LineItem) => string | null | undefined,
-): NamedWow[] {
+): NamedDelta[] {
   const cur = groupBy(current, keyFn)
   const prevMap = new Map(groupBy(previous, keyFn).map((x) => [x.name, x]))
   return cur.map((c) => {
@@ -189,7 +221,7 @@ export function dailyTrend(items: LineItem[]): { date: string; revenue: number; 
   return [...map.values()].sort((a, b) => a.date.localeCompare(b.date))
 }
 
-export function wowDelta(current: number, previous: number): number | null {
+export function pctDelta(current: number, previous: number): number | null {
   if (previous === 0) return current > 0 ? null : 0
   return (current - previous) / previous
 }
