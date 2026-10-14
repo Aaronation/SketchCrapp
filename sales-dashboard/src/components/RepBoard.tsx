@@ -25,7 +25,7 @@ export function RepBoard({ rows }: Props) {
               <div>
                 <strong>{r.name}</strong>
                 <span className="muted">
-                  {r.lines} lines · {formatMoney(r.quantity)} units
+                  {r.lines} lines · {r.quantity.toLocaleString()} units
                 </span>
               </div>
               <div className="rep-board__nums">

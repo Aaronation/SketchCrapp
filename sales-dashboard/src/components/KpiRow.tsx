@@ -42,7 +42,7 @@ export function KpiRow({
   return (
     <section className="kpis" aria-label="Weekly scorecard">
       <div>
-        <p className="kpis__label">This week · {weekLabel}</p>
+        <p className="kpis__label">This week (HKD) · {weekLabel}</p>
         <p className="kpis__value">{formatMoney(revenue)}</p>
         <p className="kpis__hint">
           vs {prevWeekLabel ?? 'prior'} {formatMoney(prevRevenue)} <Delta value={delta} />
@@ -53,7 +53,9 @@ export function KpiRow({
         <p className="kpis__value">
           <Delta value={delta} />
         </p>
-        <p className="kpis__hint">{lines.toLocaleString()} lines · {formatMoney(quantity)} units</p>
+        <p className="kpis__hint">
+          {lines.toLocaleString()} lines · {quantity.toLocaleString()} units
+        </p>
       </div>
       <div>
         <p className="kpis__label">Unique customers</p>
@@ -63,7 +65,7 @@ export function KpiRow({
         </p>
       </div>
       <div>
-        <p className="kpis__label">MTD context · {monthLabel}</p>
+        <p className="kpis__label">MTD context (HKD) · {monthLabel}</p>
         <p className="kpis__value">
           {formatMoney(mtdRevenue)}
           <span className="kpis__sub"> / {formatMoney(monthTarget)}</span>

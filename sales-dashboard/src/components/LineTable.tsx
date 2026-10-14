@@ -77,7 +77,7 @@ export function LineTable({ rows }: Props) {
               </th>
               <th>
                 <button type="button" onClick={() => toggle('totalAmount')}>
-                  Amount
+                  Amount (HKD)
                 </button>
               </th>
             </tr>

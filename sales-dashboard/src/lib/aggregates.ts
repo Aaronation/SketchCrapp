@@ -201,8 +201,13 @@ export function teamTargetForMonth(monthKey: string, targets?: Targets): number 
   return targets?.annualTeamTarget ?? 3_500_000
 }
 
+/** Format amounts in HKD (user-confirmed currency). */
 export function formatMoney(n: number): string {
-  return new Intl.NumberFormat('en-HK', { maximumFractionDigits: 0 }).format(n)
+  return new Intl.NumberFormat('en-HK', {
+    style: 'currency',
+    currency: 'HKD',
+    maximumFractionDigits: 0,
+  }).format(n)
 }
 
 export function formatPct(n: number): string {
