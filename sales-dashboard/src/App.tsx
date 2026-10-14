@@ -47,6 +47,7 @@ export default function App() {
         setFilters({
           weekKey: latest,
           salesperson: 'all',
+          // Confirmed default: All departments (no pre-selection)
           department: 'all',
           query: '',
         })
